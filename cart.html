@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TAGS Cart</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f7f8fb;color:#111827}
+.wrap{max-width:900px;margin:30px auto;padding:0 16px}
+.card{background:#fff;padding:20px;border-radius:16px;margin-bottom:15px;box-shadow:0 7px 22px rgba(0,0,0,.08)}
+.row{display:flex;gap:15px;align-items:center;border-bottom:1px solid #eee;padding:14px 0}
+.row:last-child{border:0}.row img{width:90px;height:90px;object-fit:contain;background:#f4f7f9;border-radius:10px}
+.info{flex:1}.qty{margin-top:10px;display:flex;align-items:center;gap:7px}
+.qty button{min-width:32px;height:32px;border:1px solid #ddd;border-radius:7px;background:white;cursor:pointer}
+.qty .remove{padding:6px 10px;width:auto}
+.btn{padding:12px 18px;border:0;border-radius:10px;background:#061522;color:#fff;cursor:pointer}
+.empty{text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<div class="wrap"><p><a href="index.html">← Back to Store</a></p><h1>🛒 Your Cart</h1>
+<div class="card" id="cart"></div></div>
+<script>
+const CART_KEY='tags_cart';
+
+function getCart(){
+  try{
+    const raw=localStorage.getItem(CART_KEY);
+    const parsed=raw?JSON.parse(raw):[];
+    return Array.isArray(parsed)?parsed:[];
+  }catch(e){return []}
+}
+let cart=getCart();
+
+function saveCart(){
+  localStorage.setItem(CART_KEY,JSON.stringify(cart));
+  render();
+}
+
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+
+function changeQty(index, amount){
+  if(!cart[index]) return;
+  cart[index].qty=(Number(cart[index].qty)||1)+amount;
+  if(cart[index].qty<1) cart.splice(index,1);
+  saveCart();
+}
+
+function removeItem(index){
+  cart.splice(index,1);
+  saveCart();
+}
+
+function render(){
+  const box=document.getElementById('cart');
+  if(!cart.length){
+    box.innerHTML='<div class="empty"><h2>Your cart is empty</h2><p>No items have been added yet.</p><a href="index.html">Continue shopping</a></div>';
+    return;
+  }
+
+  const subtotal=cart.reduce((s,p)=>s+Number(p.price||0)*(Number(p.qty)||1),0);
+
+  box.innerHTML=cart.map((p,i)=>`
+    <div class="row">
+      ${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}">`:'<div style="width:90px;height:90px"></div>'}
+      <div class="info">
+        <b>${esc(p.name)}</b>
+        <div>₹${Number(p.price||0).toFixed(0)} each</div>
+        <div class="qty">
+          <button onclick="changeQty(${i},-1)">−</button>
+          <b>${Number(p.qty)||1}</b>
+          <button onclick="changeQty(${i},1)">+</button>
+          <button class="remove" onclick="removeItem(${i})">Remove</button>
+        </div>
+      </div>
+      <b>₹${(Number(p.price||0)*(Number(p.qty)||1)).toFixed(0)}</b>
+    </div>`).join('')+
+    `<hr><h2>Subtotal: ₹${subtotal.toFixed(0)}</h2>
+     <button class="btn" onclick="window.location.href='checkout.html'">Proceed to Checkout</button>`;
+}
+render();
+</script>
+</body>
+</html>

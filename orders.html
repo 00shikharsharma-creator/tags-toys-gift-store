@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAGS - Order Management</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f7f7fb;color:#222}
+header{background:#111827;color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:15px}
+header h1{margin:0;font-size:22px}
+a{color:#fff;text-decoration:none}
+.wrap{max-width:1200px;margin:20px auto;padding:0 15px}
+.note{background:#fff7d6;border:1px solid #f0d66d;padding:12px 14px;border-radius:10px;margin-bottom:15px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+button,select{padding:10px 12px;border-radius:8px;border:1px solid #ccc;background:white}
+button{cursor:pointer}
+.order{background:white;position:relative;border:1px solid #ddd;border-radius:12px;margin:12px 0;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.top{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.id{font-weight:bold}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+.box{background:#f8fafc;padding:10px;border-radius:8px}
+.items{margin-top:12px;padding-left:18px}
+.status{font-weight:bold;text-transform:capitalize}
+.small{font-size:12px;color:#666}
+.empty{padding:30px;background:white;border-radius:12px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>TAGS — Order Management</h1>
+  <div><a href="admin.html">Admin</a> &nbsp; | &nbsp; <a href="index.html">Store</a> &nbsp; | &nbsp; <button onclick="logout()" style="padding:7px 10px;border-radius:7px;border:1px solid #aaa;background:white;cursor:pointer">Logout</button></div>
+</header>
+<div class="wrap">
+  <div class="note"><b>Secure admin:</b> You are signed in. Only authenticated admin users can access this page.</div>
+  <div class="toolbar">
+    <button onclick="loadOrders()">↻ Refresh orders</button>
+    <select id="filter" onchange="renderOrders()">
+      <option value="all">All orders</option>
+      <option value="new">New</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="packed">Packed</option>
+      <option value="out_for_delivery">Out for delivery</option>
+      <option value="delivered">Delivered</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+  <div id="msg"></div>
+  <div id="orders"></div>
+</div>
+<script>
+const URL=localStorage.getItem("tags_supabase_url")||"";
+const KEY=localStorage.getItem("tags_supabase_key")||"";
+const TOKEN=sessionStorage.getItem("tags_admin_access_token")||"";
+let allOrders=[];
+function money(n){return "₹"+Number(n||0).toFixed(2);}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function msg(t){document.getElementById("msg").innerHTML=`<div class="note">${esc(t)}</div>`;}
+function authHeaders(){return {"apikey":KEY,"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
+function guard(){
+ if(!URL||!KEY){msg("Supabase settings are missing. Open setup.html and save them.");return false;}
+ if(!TOKEN){location.href="login.html";return false;}
+ return true;
+}
+function logout(){sessionStorage.removeItem("tags_admin_access_token");sessionStorage.removeItem("tags_admin_email");location.href="login.html";}
+async function loadOrders(){
+ if(!guard())return;
+ msg("Loading orders...");
+ try{
+  const r=await fetch(URL.replace(/\/$/,"")+"/rest/v1/orders?select=*&order=created_at.desc",{headers:authHeaders()});
+  const text=await r.text(); let data; try{data=JSON.parse(text)}catch(e){data=null}
+  if(r.status===401){logout();return;}
+  if(!r.ok){msg("Could not load orders: "+(data?.message||text||r.status));return;}
+  allOrders=Array.isArray(data)?data:[];renderOrders();
+ }catch(e){msg("Connection error: "+e.message);}
+}
+function renderOrders(){
+ const f=document.getElementById("filter").value;
+ const list=f==="all"?allOrders:allOrders.filter(o=>(o.order_status||"new")===f);
+ const root=document.getElementById("orders");
+ if(!list.length){root.innerHTML='<div class="empty">No orders found.</div>';return;}
+ root.innerHTML=list.map(o=>{
+  let items=[];try{items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]")}catch(e){}
+  const sid=encodeURIComponent(String(o.id));
+  return `<div class="order"><div class="top"><div><div class="id">Order: ${esc(o.id)}</div><div class="small">${esc(new Date(o.created_at).toLocaleString())}</div></div>
+  <div><span class="status">Status:</span><select onchange="changeStatus('${sid}',this.value)">
+  ${["new","confirmed","packed","out_for_delivery","delivered","cancelled"].map(s=>`<option value="${s}" ${(o.order_status||"new")===s?"selected":""}>${s.replaceAll("_"," ")}</option>`).join("")}
+  </select></div></div>
+  <div class="grid"><div class="box"><b>Customer</b><br>${esc(o.customer_name)}<br>${esc(o.mobile)}</div>
+  <div class="box"><b>Address</b><br>${esc(o.address)}<br>${esc(o.city)} - ${esc(o.pin)}</div>
+  <div class="box"><b>Payment</b><br>${esc(o.payment_method)}<br>Status: ${esc(o.payment_status)}</div>
+  <div class="box"><b>Total</b><br><strong>${money(o.total)}</strong><br>Subtotal: ${money(o.subtotal)}<br>Delivery: ${money(o.delivery_charge)}</div></div>
+  <div class="items"><b>Items</b><ul>${items.map(i=>`<li>${esc(i.name)} × ${esc(i.qty||i.quantity||1)} — ${money(i.price)}</li>`).join("")}</ul></div>
+  <div style="margin-top:14px;display:flex;justify-content:flex-end"><button onclick="deleteOrder('${sid}')" style="background:#b91c1c;color:white;border:0;padding:10px 14px;border-radius:8px;cursor:pointer">Delete test order</button></div></div>`;
+ }).join("");
+ document.getElementById("msg").innerHTML="";
+}
+async function changeStatus(encodedId,status){
+ if(!guard())return;
+ const id=decodeURIComponent(encodedId);
+ try{
+  const r=await fetch(URL.replace(/\/$/,"")+"/rest/v1/orders?id=eq."+encodeURIComponent(id),{
+   method:"PATCH",headers:{...authHeaders(),"Prefer":"return=minimal"},body:JSON.stringify({order_status:status})
+  });
+  const text=await r.text();let data;try{data=JSON.parse(text)}catch(e){data=null}
+  if(r.status===401){logout();return;}
+  if(!r.ok){alert("Status update failed: "+(data?.message||text||r.status));return;}
+  const o=allOrders.find(x=>x.id===id);if(o)o.order_status=status;renderOrders();
+ }catch(e){alert("Connection error: "+e.message);}
+}
+
+async function deleteOrder(encodedId){
+ if(!guard())return;
+ const id=decodeURIComponent(encodedId);
+ const order=allOrders.find(x=>x.id===id);
+ const label=order ? `${order.customer_name||"this customer"} — ${money(order.total)}` : id;
+ if(!confirm("Delete this order permanently?\n\n"+label+"\n\nUse this only for test orders. This cannot be undone.")) return;
+ try{
+  const r=await fetch(URL.replace(/\/$/,"")+"/rest/v1/orders?id=eq."+encodeURIComponent(id),{
+   method:"DELETE",headers:{...authHeaders(),"Prefer":"return=minimal"}
+  });
+  const text=await r.text();let data;try{data=JSON.parse(text)}catch(e){data=null}
+  if(r.status===401){logout();return;}
+  if(!r.ok){alert("Delete failed: "+(data?.message||text||r.status));return;}
+  allOrders=allOrders.filter(x=>x.id!==id);renderOrders();
+ }catch(e){alert("Connection error: "+e.message);}
+}
+document.querySelector("header").insertAdjacentHTML("beforeend",`<button onclick="logout()" style="padding:9px 12px;border-radius:8px;border:0;cursor:pointer">Logout</button>`);
+loadOrders();
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout | TAGS Toys & Gift Store</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f7f7fb;color:#222}
+header{background:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px #0001}
+header img{height:55px;max-width:145px;object-fit:contain}header h1{font-size:21px;margin:0}header p{margin:3px 0 0;color:#777;font-size:13px}
+main{max-width:1050px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1.25fr .75fr;gap:20px}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 3px 14px #0000000d}h2{margin-top:0;font-size:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{font-weight:600;font-size:14px}
+input,textarea{width:100%;margin-top:6px;padding:11px;border:1px solid #ddd;border-radius:9px;font-size:15px}
+textarea{min-height:90px}.full{grid-column:1/-1}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:8px}.options label,.payment label{border:1px solid #ddd;border-radius:9px;padding:11px;font-weight:500;cursor:pointer}
+.options input,.payment input{width:auto;margin:0 7px 0 0}.payment{display:grid;gap:8px}
+#upi{display:none;background:#fff7d6;border-radius:9px;padding:12px;margin-top:10px}
+.row{display:flex;justify-content:space-between;padding:7px 0}.total{border-top:1px solid #ddd;margin-top:8px;padding-top:12px;font-size:20px;font-weight:bold}
+button{width:100%;padding:13px;border:0;border-radius:10px;background:#111;color:#fff;font-size:16px;font-weight:bold;margin-top:14px;cursor:pointer}
+button:disabled{opacity:.5}.note{font-size:13px;color:#666;line-height:1.45}
+.success{display:none;max-width:650px;margin:40px auto;padding:0 16px;text-align:center}.success .card{text-align:center}
+@media(max-width:760px){main{grid-template-columns:1fr}.grid,.options{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header>
+<img src="assets/tags-logo.jpeg" alt="TAGS logo">
+<div><h1>TAGS Toys & Gift Store</h1><p>Always in Your Favour</p></div>
+</header>
+
+<main id="checkout">
+<section class="card">
+<h2>Customer Details</h2>
+<div class="grid">
+<div><label>Full Name<input id="name"></label></div>
+<div><label>Mobile Number<input id="mobile" inputmode="numeric" maxlength="10"></label></div>
+<div><label>City<input id="city" value="Delhi"></label></div>
+<div><label>PIN Code<input id="pin" inputmode="numeric" maxlength="6"></label></div>
+<div class="full"><label>Full Delivery Address<textarea id="address"></textarea></label></div>
+</div>
+
+<h2 style="margin-top:22px">Delivery Charge</h2>
+<div class="options">
+<label><input type="radio" name="distance" value="25" checked>Under 1 km — ₹25</label>
+<label><input type="radio" name="distance" value="50">1 km to under 2 km — ₹50</label>
+<label><input type="radio" name="distance" value="75">2–3 km — ₹75</label>
+<label><input type="radio" name="distance" value="100">Above 3 km — ₹100</label>
+</div>
+<p class="note" id="free"></p>
+
+<h2 style="margin-top:22px">Payment Method</h2>
+<div class="payment">
+<label><input type="radio" name="payment" value="COD" checked>Cash on Delivery</label>
+<label><input type="radio" name="payment" value="UPI">UPI Payment</label>
+</div>
+<div id="upi"><b>UPI ID:</b> 9105645136@okbizaxis<br><span class="note">UPI payment verification will be added securely before public launch.</span></div>
+
+<button id="place" onclick="placeOrder()">Place Order</button>
+<p class="note">Your order will be saved to the store database.</p>
+</section>
+
+<section class="card">
+<h2>Your Order</h2>
+<div id="items"></div>
+<div class="row"><span>Product subtotal</span><b id="sub">₹0</b></div>
+<div class="row"><span>Delivery</span><b id="del">₹0</b></div>
+<div class="row total"><span>Total</span><b id="total">₹0</b></div>
+</section>
+</main>
+
+<section class="success" id="success">
+<div class="card">
+<h2>Order Placed Successfully 🎉</h2>
+<p>Order ID: <b id="oid"></b></p>
+<p>Total: <b id="ototal"></b></p>
+<button onclick="whatsapp()">Send Order on WhatsApp</button>
+<button onclick="location.href='index.html'">Back to Store</button>
+</div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* IMPORTANT: put the same Supabase URL and publishable key here that your working
+   product/admin pages already use. Never put a secret/service_role key here. */
+const SUPABASE_URL=localStorage.getItem("tags_supabase_url")||"";
+const SUPABASE_PUBLISHABLE_KEY=localStorage.getItem("tags_supabase_key")||"";
+let sb=null;
+function connectSupabase(){
+  if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){
+    alert("Supabase settings are missing. Please open setup.html first and save your Supabase settings.");
+    return false;
+  }
+  try{
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+    return true;
+  }catch(e){
+    alert("Supabase connection error: "+e.message);
+    return false;
+  }
+}
+
+let cart=JSON.parse(localStorage.getItem("tags_cart")||"[]");
+let placed=null;
+
+function items(){
+ return (Array.isArray(cart)?cart:[]).map(x=>({
+  name:x.name||x.title||"Product",price:Number(x.price||0),
+  quantity:Number(x.qty||x.quantity||1)
+ })).filter(x=>x.quantity>0);
+}
+function money(n){return "₹"+Math.round(Number(n));}
+function calc(){
+ const a=items(), count=a.reduce((s,x)=>s+x.quantity,0);
+ const sub=a.reduce((s,x)=>s+x.price*x.quantity,0);
+ const chosen=Number(document.querySelector('input[name=distance]:checked').value);
+ const free=count>=3&&sub>=300, del=free?0:chosen;
+ document.getElementById("sub").textContent=money(sub);
+ document.getElementById("del").textContent=free?"FREE":money(del);
+ document.getElementById("total").textContent=money(sub+del);
+ document.getElementById("free").textContent=free?"🎁 Free delivery applied.":"";
+ return {a,count,sub,del,total:sub+del};
+}
+function render(){
+ const a=items();
+ document.getElementById("items").innerHTML=a.length?a.map(x=>
+  '<div class="row"><span>'+esc(x.name)+' × '+x.quantity+'</span><b>'+money(x.price*x.quantity)+'</b></div>'
+ ).join(""):"<p class='note'>Your cart is empty.</p>";
+ calc();
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+document.querySelectorAll('input[name=distance]').forEach(x=>x.onchange=calc);
+document.querySelectorAll('input[name=payment]').forEach(x=>x.onchange=()=>{
+ document.getElementById("upi").style.display=document.querySelector('input[name=payment]:checked').value==="UPI"?"block":"none";
+});
+async function placeOrder(){
+ if(!connectSupabase()) return;
+ const name=document.getElementById("name").value.trim(), mobile=document.getElementById("mobile").value.trim();
+ const city=document.getElementById("city").value.trim(), pin=document.getElementById("pin").value.trim();
+ const address=document.getElementById("address").value.trim(), c=calc();
+ if(!c.a.length)return alert("Your cart is empty.");
+ if(!name||!/^\d{10}$/.test(mobile)||!/^\d{6}$/.test(pin)||!address)
+  return alert("Please enter your name, valid 10-digit mobile number, 6-digit PIN code and full address.");
+ const btn=document.getElementById("place");btn.disabled=true;btn.textContent="Placing Order...";
+ const payment=document.querySelector('input[name=payment]:checked').value;
+ const orderId=crypto.randomUUID();
+ const payload={id:orderId,customer_name:name,mobile,address,city,pin,items:c.a,subtotal:c.sub,
+ delivery_charge:c.del,total:c.total,payment_method:payment,payment_status:"pending",order_status:"new"};
+ try{
+  const r=await sb.from("orders").insert(payload);
+  if(r.error)throw r.error;
+  placed={...payload,id:orderId};
+  document.getElementById("oid").textContent=orderId;
+  document.getElementById("ototal").textContent=money(c.total);
+  localStorage.removeItem("tags_cart");
+  document.getElementById("checkout").style.display="none";
+  document.getElementById("success").style.display="block";
+ }catch(e){
+  console.error(e);alert("Order could not be saved. Please check the Supabase settings in checkout.html.");
+  btn.disabled=false;btn.textContent="Place Order";
+ }
+}
+function whatsapp(){
+ if(!placed)return;
+ const list=placed.items.map(x=>x.name+" × "+x.quantity+" = "+money(x.price*x.quantity)).join("\n");
+ const msg="New Order - TAGS Toys & Gift Store\nOrder ID: "+placed.id+
+ "\nName: "+placed.customer_name+"\nMobile: "+placed.mobile+
+ "\nAddress: "+placed.address+", "+placed.city+" - "+placed.pin+
+ "\n\nItems:\n"+list+"\n\nSubtotal: "+money(placed.subtotal)+
+ "\nDelivery: "+(placed.delivery_charge===0?"FREE":money(placed.delivery_charge))+
+ "\nTotal: "+money(placed.total)+"\nPayment: "+placed.payment_method;
+ location.href="https://wa.me/919105645136?text="+encodeURIComponent(msg);
+}
+render();
+</script>
+</body>
+</html>

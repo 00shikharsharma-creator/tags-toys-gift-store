@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TAGS Store Setup</title><style>body{font-family:Arial;max-width:720px;margin:40px auto;padding:0 18px;background:#f7f8fb;color:#111827}.card{background:#fff;padding:24px;border-radius:18px;box-shadow:0 8px 28px #0001}input{width:100%;box-sizing:border-box;padding:12px;margin:7px 0 16px;border:1px solid #d1d5db;border-radius:10px}button{padding:12px 18px;border:0;border-radius:10px;background:#061522;color:#fff}.ok{margin-top:15px;font-weight:bold}</style></head>
+<body><div class="card"><h1>TAGS Supabase Setup</h1><p>Use the same Project URL and Publishable Key that already worked in your Admin page.</p>
+<label>Supabase Project URL</label><input id="url" placeholder="https://your-project.supabase.co">
+<label>Supabase Publishable Key</label><input id="key" placeholder="sb_publishable_...">
+<button id="save">Save & Test</button><div id="msg" class="ok"></div>
+<p>After saving, open <a href="index.html">index.html</a>. Your products should appear automatically.</p></div>
+<script>
+url.value=localStorage.getItem('tags_supabase_url')||'';key.value=localStorage.getItem('tags_supabase_key')||'';
+save.onclick=()=>{const u=url.value.trim().replace(/\/rest\/v1\/?$/,'');const k=key.value.trim();if(!u||!k){msg.textContent='Enter both values.';return}localStorage.setItem('tags_supabase_url',u);localStorage.setItem('tags_supabase_key',k);msg.textContent='Saved successfully. Now open the store.'};
+</script></body></html>

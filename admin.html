@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TAGS Admin</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:900px;margin:30px auto;padding:0 16px;background:#f7f8fb;color:#111827}
+.card{background:#fff;padding:22px;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.07);margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+input,select,textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d1d5db;border-radius:10px}
+textarea{min-height:90px}button{padding:11px 16px;border:0;border-radius:10px;background:#111827;color:#fff;cursor:pointer}
+.msg{white-space:pre-wrap;margin-top:12px;padding:12px;border-radius:10px;background:#f3f4f6}
+</style></head><body>
+<h1>TAGS Product Admin</h1>
+<div class="card"><h2>Add Product</h2><div class="grid">
+<div><label>Name</label><input id="productName"></div>
+<div><label>Category</label><select id="productCategory"><option>Toys</option><option>Gifted items</option><option>General appliances</option><option>Stationery</option></select></div>
+<div><label>Price (₹)</label><input id="productPrice" type="number" min="0" step="0.01"></div>
+<div><label>Image URL</label><input id="productImage"></div>
+</div>
+<p><label>Description</label><textarea id="productDescription"></textarea></p>
+<p><label><input id="productStock" type="checkbox" checked style="width:auto"> In stock</label></p>
+<button id="addBtn">Add Product</button>
+<div id="status" class="msg">Ready.</div></div>
+<div class="card"><h2>Products</h2><button id="refreshBtn">Refresh</button><div id="products"></div></div>
+<script>
+const URL=localStorage.getItem("tags_supabase_url")||"";
+const KEY=localStorage.getItem("tags_supabase_key")||"";
+const TOKEN=sessionStorage.getItem("tags_admin_access_token")||"";
+const statusEl=document.getElementById('status');
+function showStatus(m){statusEl.textContent=m;}
+function guard(){if(!TOKEN){location.href="login.html";return false;}if(!URL||!KEY){showStatus("Supabase settings missing. Open setup.html first.");return false;}return true;}
+function headers(){return {"apikey":KEY,"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
+async function addProduct(){
+ if(!guard())return;
+ const productName=document.getElementById('productName').value.trim(),category=document.getElementById('productCategory').value;
+ const priceRaw=document.getElementById('productPrice').value,description=document.getElementById('productDescription').value.trim();
+ const imageUrl=document.getElementById('productImage').value.trim(),inStock=document.getElementById('productStock').checked;
+ if(!productName){showStatus('Please enter a product name.');return;}
+ if(priceRaw===''||Number(priceRaw)<0){showStatus('Please enter a valid price.');return;}
+ showStatus('Adding product...');
+ const r=await fetch(URL.replace(/\/$/,"")+"/rest/v1/products",{method:"POST",headers:{...headers(),"Prefer":"return=minimal"},
+ body:JSON.stringify({name:productName,category,description,price:Number(priceRaw),image_url:imageUrl||null,in_stock:inStock})});
+ const text=await r.text();let data;try{data=JSON.parse(text)}catch(e){data=null}
+ if(r.status===401){sessionStorage.clear();location.href="login.html";return;}
+ if(!r.ok){showStatus("Supabase error:\n"+(data?.message||text||r.status));return;}
+ showStatus("Product added successfully.");
+ document.getElementById('productName').value='';document.getElementById('productPrice').value='';
+ document.getElementById('productDescription').value='';document.getElementById('productImage').value='';loadProducts();
+}
+async function loadProducts(){
+ if(!guard())return;
+ const box=document.getElementById('products');
+ const r=await fetch(URL.replace(/\/$/,"")+"/rest/v1/products?select=id,name,category,price,in_stock,created_at&order=created_at.desc",{headers:headers()});
+ const text=await r.text();let data;try{data=JSON.parse(text)}catch(e){data=null}
+ if(r.status===401){sessionStorage.clear();location.href="login.html";return;}
+ if(!r.ok){box.textContent='Load error: '+(data?.message||text||r.status);return;}
+ box.innerHTML=(data||[]).map(p=>`<p><b>${String(p.name).replace(/[&<>"']/g,"")}</b> — ₹${Number(p.price||0).toFixed(2)} — ${String(p.category).replace(/[&<>"']/g,"")}</p>`).join('')||'<p>No products yet.</p>';
+}
+document.getElementById('addBtn').addEventListener('click',addProduct);
+document.getElementById('refreshBtn').addEventListener('click',loadProducts);
+document.body.insertAdjacentHTML("afterbegin",'<div style="text-align:right;padding:10px 16px"><a href="orders.html">Order Management</a> &nbsp; | &nbsp; <button onclick="sessionStorage.clear();location.href=\'login.html\'">Logout</button></div>');
+loadProducts();
+</script></body></html>
