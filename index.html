@@ -214,7 +214,7 @@
         <a href="#stationery">STATIONERY</a>
       </div>
       <div class="nav-actions">
-        <button class="icon-btn" aria-label="Search">⌕</button>
+        <button class="icon-btn" id="tagsSearchBtn" aria-label="Search" type="button" onclick="openTAGSSearch()">⌕</button>
         <a class="icon-btn cart" aria-label="Cart" href="cart.html">🛒<span class="badge" id="cartCount">0</span></a>
       </div>
     </nav>
@@ -306,6 +306,7 @@
   </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.TAGS_SUPABASE_URL='https://mahxaapaaznoqzweerbr.supabase.co';window.TAGS_SUPABASE_KEY='sb_publishable_NJkcrLNuRXKKPR2n263KmQ_FvcwDMDT'</script>
 <script>
 const TAGS_CART_KEY='tags_cart';
 let tagsCart=JSON.parse(localStorage.getItem(TAGS_CART_KEY)||'[]');
@@ -352,8 +353,8 @@ function productCard(p){
 async function loadTAGSProducts(){
   const message=document.getElementById('productMessage');
   const grid=document.getElementById('productGrid');
-  const url='https://mahxaapaaznoqzweerbr.supabase.co';
-  const key='sb_publishable_NJkcrLNuRXKRPR2n263KmQ_FvcwDMDT';
+  const url=(localStorage.getItem('tags_supabase_url') || window.TAGS_SUPABASE_URL);
+  const key=(localStorage.getItem('tags_supabase_key') || window.TAGS_SUPABASE_KEY);
   if(!url||!key){
     message.innerHTML='Supabase is not connected yet. <a href="setup.html">Open setup</a>.';
     grid.innerHTML='';return;
@@ -406,8 +407,8 @@ function productCard(p){
 async function loadTAGSProducts(){
   const message=document.getElementById('productMessage');
   const grid=document.getElementById('productGrid');
-  const url=localStorage.getItem('tags_supabase_url');
-  const key=localStorage.getItem('tags_supabase_key');
+  const url=(localStorage.getItem('tags_supabase_url') || window.TAGS_SUPABASE_URL);
+  const key=(localStorage.getItem('tags_supabase_key') || window.TAGS_SUPABASE_KEY);
   if(!url||!key){
     message.innerHTML='Supabase is not connected yet. <a href="setup.html" style="color:#1597e5;font-weight:700">Open setup</a>.';
     grid.innerHTML='';
@@ -432,5 +433,59 @@ async function loadTAGSProducts(){
 document.addEventListener('DOMContentLoaded',()=>{updateCartCount();loadTAGSProducts();});
 </script>
 
-<script id="tags-ai-script">function tagsPrompt(x){document.getElementById('tagsQ').value=x;askTAGS()}function tagsEsc(x){return String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}async function askTAGS(){const q=document.getElementById('tagsQ').value.trim().toLowerCase(),a=document.getElementById('tagsAnswer');a.style.display='block';if(!q){a.innerHTML='<b>🤖</b> Tell me what you need.';return}const u=localStorage.getItem('tags_supabase_url'),k=localStorage.getItem('tags_supabase_key');if(!u||!k){a.innerHTML='<b>🤖</b> Please browse our products below or contact us on WhatsApp.';return}try{const r=await fetch(u+'/rest/v1/products?select=name,category,description,price&in_stock=eq.true&order=created_at.desc',{headers:{apikey:k,Authorization:'Bearer '+k}}),ps=await r.json(),m=q.match(/(?:under|below|upto|up to)\s*₹?\s*(\d+)/),b=m?+m[1]:null,z=ps.map(p=>{let t=(p.name+' '+p.category+' '+(p.description||'')).toLowerCase(),x=0;if(b!==null)x+=p.price<=b?6:-6;if(/toy|kid|child|car|block|game|cactus/.test(q)&&/toy|car|block|game|cactus/.test(t))x+=5;if(/gift|birthday|present/.test(q)&&/gift|birthday|toy|cactus|car/.test(t))x+=5;if(/stationery|pen|pencil|school|notebook/.test(q)&&/stationery|pen|pencil|school|notebook/.test(t))x+=6;q.split(/\s+/).forEach(w=>{if(w.length>2&&t.includes(w))x++});return{p,x}}).filter(x=>x.x>0).sort((a,b)=>b.x-a.x).map(x=>x.p).filter(p=>b===null||p.price<=b);if(!z.length){a.innerHTML='<b>🤖</b> I could not find an exact match. Try another budget or category.';return}a.innerHTML='<b>🤖 TAGS:</b> Good options:<br>'+z.slice(0,3).map(p=>'<div style="padding:5px 0;border-top:1px solid #dde6ec"><b>'+tagsEsc(p.name)+'</b> — ₹'+Number(p.price).toFixed(0)+(p.description?' · '+tagsEsc(p.description):'')+'</div>').join('')}catch(e){a.innerHTML='<b>🤖</b> I could not connect right now. Please try again.'}}</script></body>
+<script id="tags-ai-script">function tagsPrompt(x){document.getElementById('tagsQ').value=x;askTAGS()}function tagsEsc(x){return String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}async function askTAGS(){const q=document.getElementById('tagsQ').value.trim().toLowerCase(),a=document.getElementById('tagsAnswer');a.style.display='block';if(!q){a.innerHTML='<b>🤖</b> Tell me what you need.';return}const u=(localStorage.getItem('tags_supabase_url') || window.TAGS_SUPABASE_URL),k=(localStorage.getItem('tags_supabase_key') || window.TAGS_SUPABASE_KEY);if(!u||!k){a.innerHTML='<b>🤖</b> Please browse our products below or contact us on WhatsApp.';return}try{const r=await fetch(u+'/rest/v1/products?select=name,category,description,price&in_stock=eq.true&order=created_at.desc',{headers:{apikey:k,Authorization:'Bearer '+k}}),ps=await r.json(),m=q.match(/(?:under|below|upto|up to)\s*₹?\s*(\d+)/),b=m?+m[1]:null,z=ps.map(p=>{let t=(p.name+' '+p.category+' '+(p.description||'')).toLowerCase(),x=0;if(b!==null)x+=p.price<=b?6:-6;if(/toy|kid|child|car|block|game|cactus/.test(q)&&/toy|car|block|game|cactus/.test(t))x+=5;if(/gift|birthday|present/.test(q)&&/gift|birthday|toy|cactus|car/.test(t))x+=5;if(/stationery|pen|pencil|school|notebook/.test(q)&&/stationery|pen|pencil|school|notebook/.test(t))x+=6;q.split(/\s+/).forEach(w=>{if(w.length>2&&t.includes(w))x++});return{p,x}}).filter(x=>x.x>0).sort((a,b)=>b.x-a.x).map(x=>x.p).filter(p=>b===null||p.price<=b);if(!z.length){a.innerHTML='<b>🤖</b> I could not find an exact match. Try another budget or category.';return}a.innerHTML='<b>🤖 TAGS:</b> Good options:<br>'+z.slice(0,3).map(p=>'<div style="padding:5px 0;border-top:1px solid #dde6ec"><b>'+tagsEsc(p.name)+'</b> — ₹'+Number(p.price).toFixed(0)+(p.description?' · '+tagsEsc(p.description):'')+'</div>').join('')}catch(e){a.innerHTML='<b>🤖</b> I could not connect right now. Please try again.'}}</script>
+<div id="tagsSearchPanel" class="tags-search-panel" aria-hidden="true">
+  <div class="tags-search-box">
+    <input id="tagsSearchInput" type="search" placeholder="Search toys, gifts, stationery..." autocomplete="off">
+    <button type="button" onclick="closeTAGSSearch()" aria-label="Close search">✕</button>
+  </div>
+  <div id="tagsSearchResult" class="tags-search-result"></div>
+</div>
+<style>
+.tags-search-panel{display:none;position:fixed;top:96px;right:28px;width:min(460px,calc(100vw - 56px));background:#fff;border-radius:16px;padding:12px;box-shadow:0 18px 50px rgba(0,0,0,.2);z-index:9999;border:1px solid #e3e9ee}
+.tags-search-panel.open{display:block}
+.tags-search-box{display:flex;gap:8px}
+.tags-search-box input{flex:1;padding:13px 14px;border:1px solid #d7e0e7;border-radius:10px;font-size:16px;outline:none}
+.tags-search-box button{width:44px;border:0;border-radius:10px;background:#061522;color:#fff;font-size:18px;cursor:pointer}
+.tags-search-result{padding:9px 4px 2px;color:#647281;font-size:13px}
+@media(max-width:600px){.tags-search-panel{top:92px;right:14px;width:calc(100vw - 28px)}}
+</style>
+<script>
+function openTAGSSearch(){
+  const panel=document.getElementById('tagsSearchPanel');
+  const input=document.getElementById('tagsSearchInput');
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden','false');
+  setTimeout(()=>input.focus(),50);
+}
+function closeTAGSSearch(){
+  const panel=document.getElementById('tagsSearchPanel');
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden','true');
+}
+function runTAGSSearch(){
+  const input=document.getElementById('tagsSearchInput');
+  const q=input.value.trim().toLowerCase();
+  const cards=[...document.querySelectorAll('#productGrid article')];
+  const result=document.getElementById('tagsSearchResult');
+  if(!q){
+    cards.forEach(c=>c.style.display='');
+    result.textContent='';
+    return;
+  }
+  let matches=0;
+  cards.forEach(card=>{
+    const hit=card.textContent.toLowerCase().includes(q);
+    card.style.display=hit?'':'none';
+    if(hit) matches++;
+  });
+  result.textContent=matches ? matches+' product'+(matches===1?'':'s')+' found' : 'No products found. Try another search.';
+  document.getElementById('products')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const input=document.getElementById('tagsSearchInput');
+  if(input) input.addEventListener('input',runTAGSSearch);
+});
+</script>
+</body>
 </html>

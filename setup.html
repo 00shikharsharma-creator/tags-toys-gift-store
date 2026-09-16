@@ -6,6 +6,6 @@
 <button id="save">Save & Test</button><div id="msg" class="ok"></div>
 <p>After saving, open <a href="index.html">index.html</a>. Your products should appear automatically.</p></div>
 <script>
-url.value=localStorage.getItem('tags_supabase_url')||'';key.value=localStorage.getItem('tags_supabase_key')||'';
+url.value=localStorage.getItem('tags_supabase_url')||'https://mahxaapaaznoqzweerbr.supabase.co';key.value=localStorage.getItem('tags_supabase_key')||'sb_publishable_NJkcrLNuRXKKPR2n263KmQ_FvcwDMDT';
 save.onclick=()=>{const u=url.value.trim().replace(/\/rest\/v1\/?$/,'');const k=key.value.trim();if(!u||!k){msg.textContent='Enter both values.';return}localStorage.setItem('tags_supabase_url',u);localStorage.setItem('tags_supabase_key',k);msg.textContent='Saved successfully. Now open the store.'};
 </script></body></html>
