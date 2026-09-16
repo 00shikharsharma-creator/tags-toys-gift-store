@@ -353,8 +353,8 @@ function productCard(p){
 async function loadTAGSProducts(){
   const message=document.getElementById('productMessage');
   const grid=document.getElementById('productGrid');
-  const url=(localStorage.getItem('tags_supabase_url') || window.TAGS_SUPABASE_URL);
-  const key=(localStorage.getItem('tags_supabase_key') || window.TAGS_SUPABASE_KEY);
+  const url='https://mahxaapaaznoqzweerbr.supabase.co';
+  const key='sb_publishable_NJkcrLNuRXKRPR2n263KmQ_FvcwDMDT  ';
   if(!url||!key){
     message.innerHTML='Supabase is not connected yet. <a href="setup.html">Open setup</a>.';
     grid.innerHTML='';return;
